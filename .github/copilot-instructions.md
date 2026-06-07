@@ -156,6 +156,21 @@ CI requires `git config user.email/name` to be set before `apply_patches.sh`.
 - `master` — primary/release branch
 - `dev` — active development branch
 -
+## SerDes format configuration notes
+
+- `DS5_FW_CSI_PT` (`0x2E`) is the D40x FW-internal CSI passthrough (CSI-PT) mode selector, not a MIPI wire DT. Written to `DS5_RGB_STREAM_DT` to activate FW CSI passthrough mode. Its sole active use is the **D401 RAW8 CSI passthrough** mode for the OV9782 RGB sensor:
+  - Write `0x2E` to `dt_addr` (FW data-type mode register) to activate CSI-PT mode.
+  - Write `0x2A` (`MIPI_CSI2_TYPE_RAW8`) to `override_addr` — FW then remaps **all** wire DTs (including OV9782 pixel long packets) to RAW8 on the GMSL link.
+  - Write `0x2A` to the SerDes PIPE_X_DT register so MAX9296 routes the RAW8 packets correctly. Never use `0x2B` here — MAX9296 would drop all `0x2A` pixel packets → `PIXEL_INCOMPLETE`.
+  - Set `mbus_code = MEDIA_BUS_FMT_SRGGB8_1X8` and `width = 1612` (VDF byte-count per line; needed for correct DMA `bytesperline`). Clamp `width` to 1288 (actual OV9782 pixel count) before writing `DS5_RGB_RES_WIDTH`.
+  - Do **not** call `max9295_set_pipe_bpp()` — it causes `CAPTURE_CHANNEL_ERROR_COLLISION` (~42–56 events) in the Tegra VI descriptor engine and drops all frames.
+
+## NVCSI / VI capture notes
+
+- **D401 VDF dword alignment**: The D401 VDF dword-pads RAW10 output: 1288px × 10/8 = 1610B → ALIGN(1610, 4) = 1612B transmitted as MIPI WC. A RAW10 NVCSI capture path cannot fix this: the NVCSI RAW10 depacketizer requires `frame_x` divisible by 8, and no 8-aligned pixel count produces an expected WC of exactly 1612B — non-8-aligned values (e.g. 1290, 1292) cause `CAPTURE_CHANNEL_ERROR_COLLISION` and 0% SOF.
+- **Correct fix — RAW8 passthrough**: Use D401 RAW8 CSI passthrough (see SerDes notes above). NVCSI captures raw bytes with no depacketizer; `frame_x = 1612` (1 byte/pixel) → expected WC = 1612B = actual WC → exact match, 0 COLLISION. `frame_x` is in pixels, not bytes.
+- Do **not** set `dt_enable = 1` in the VI capture descriptor — it suppresses DT=0x00 Frame Start packets, causing `sof:0.0` and `PIXEL_INCOMPLETE` on every frame.
+
 ## Refactoring notes (recent commits)
 
 Recent multi-phase refactoring of `kernel/realsense/d4xx.c`:
