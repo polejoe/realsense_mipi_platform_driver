@@ -1384,7 +1384,7 @@ static const struct ds5_format ds5_y_formats_40x[] = {
 		.resolutions = d40x_calibration_sizes,
 	}, {
 		.data_type = DS5_FW_CSI_PT,		/* EP3 left OV9782: activates FW CSI-PT mode; FW remaps wire DT to RAW8 */
-		.mbus_code = MEDIA_BUS_FMT_SRGGB8_1X8,
+		.mbus_code = MEDIA_BUS_FMT_SBGGR8_1X8,
 		.n_resolutions = ARRAY_SIZE(raw8_1612x808_sizes),
 		.resolutions = raw8_1612x808_sizes,
 	},
@@ -1445,7 +1445,7 @@ static const struct ds5_format ds5_40x_rgb_formats[] = {
 	// 	.resolutions = d40x_rgb_sizes,
 	// },{
 		.data_type = DS5_FW_CSI_PT,	/* activates FW CSI-PT mode; FW remaps wire DT to RAW8 */
-		.mbus_code = MEDIA_BUS_FMT_SRGGB8_1X8,
+		.mbus_code = MEDIA_BUS_FMT_SBGGR8_1X8,
 		.n_resolutions = ARRAY_SIZE(raw8_1612x808_sizes),
 		.resolutions = raw8_1612x808_sizes,
 	},
@@ -1939,7 +1939,7 @@ static int ds5_configure(struct ds5 *state)
 	/* D401 RAW8 CSI passthrough: FW remaps all wire DTs to RAW8 on the
 	 * GMSL link; MAX9296 pipe routing must match the actual wire DT.
 	 */
-	if (sensor->config.format->mbus_code == MEDIA_BUS_FMT_SRGGB8_1X8)
+	if (sensor->config.format->mbus_code == MEDIA_BUS_FMT_SBGGR8_1X8)
 		data_type1 = MIPI_CSI2_TYPE_RAW8;
 
 	vc_id = state->g_ctx.dst_vc;
@@ -2031,7 +2031,7 @@ static int ds5_configure(struct ds5 *state)
 		/* RAW8 CSI passthrough: FW runs in CSI-PT mode (0x2E → dt_addr) and
 		 * remaps all wire DTs to RAW8 via override_addr=0x2A.
 		 */
-		if (sensor->config.format->mbus_code == MEDIA_BUS_FMT_SRGGB8_1X8)
+		if (sensor->config.format->mbus_code == MEDIA_BUS_FMT_SBGGR8_1X8)
 			dt_value = MIPI_CSI2_TYPE_RAW8;
 		if (sensor->cached_override_value != dt_value) {
 			ret = ds5_write(state, override_addr, dt_value);
@@ -2057,7 +2057,7 @@ static int ds5_configure(struct ds5 *state)
 	 * DMA surface stride), but the FW width register (DS5_RGB_RES_WIDTH for EP4,
 	 * DS5_IR_RES_WIDTH for EP3) expects the OV9782 physical pixel count. Clamp to 1288.
 	 */
-	if (sensor->config.format->mbus_code == MEDIA_BUS_FMT_SRGGB8_1X8 && width_value == 1612)
+	if (sensor->config.format->mbus_code == MEDIA_BUS_FMT_SBGGR8_1X8 && width_value == 1612)
 		width_value = 1288;
 	if (sensor->cached_width_value != width_value) {
 		ret = ds5_write(state, width_addr, width_value);
